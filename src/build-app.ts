@@ -18,6 +18,15 @@ export function buildApp(): App {
     bodyLimitBytes: 1024 * 1024,
     requestTimeoutMs: 5_000,
     production: process.env.NODE_ENV === "production",
+    // Declarative reverse-proxy posture. Railway puts exactly one edge proxy
+    // in front of the container, which appends the real client IP as the
+    // right-most `X-Forwarded-For` entry. `{ hops: 1 }` trusts that single
+    // hop (and refuses spoofed extra hops), which is what lets rate-limit
+    // keying, request-id propagation, and audit logs see the true client IP.
+    // This satisfies the boot guard that otherwise 500s on `x-forwarded-for`
+    // when the proxy posture is unconfigured. Bump `hops` if you add another
+    // proxy in front (e.g. Cloudflare in front of Railway -> { hops: 2 }).
+    behindProxy: { hops: 1 },
     // daloy-minimal:strip-start docs
     // Auto-mounted docs (when `docs: true`):
     //   GET /openapi.json — OpenAPI 3.1 spec (JSON)
