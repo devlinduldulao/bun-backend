@@ -23,4 +23,9 @@ const links: StartupBannerLink[] = [
 
 printStartupBanner({ name: "DaloyJS API", url, runtime: "Bun", links });
 
-export default app;
+// NOTE: Do not `export default app` here. Bun auto-starts a server from a
+// default export that looks like a server config ({ fetch, ... }). Since this
+// file already starts the listener explicitly via serve() above, exporting it
+// would make Bun bind a second server on the same port → EADDRINUSE → crash
+// (seen on Railway as "Uncaught exception — exiting"). Tooling that needs the
+// app imports buildApp() from ./build-app.ts instead.
