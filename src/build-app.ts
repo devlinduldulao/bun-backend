@@ -8,6 +8,29 @@ import {
 } from "@daloyjs/core";
 
 /**
+ * Resolve the public base URL advertised in the OpenAPI `servers` list.
+ *
+ * Scalar's "Try it" button sends requests to this URL. It must match the
+ * origin the docs page is served from, otherwise the `connect-src 'self'`
+ * CSP set by `secureHeaders()` blocks the request. Hardcoding `localhost`
+ * is why the deployed docs tried to call `http://localhost:8080`.
+ *
+ * Resolution order:
+ *  1. `PUBLIC_URL` — explicit override (use this for a custom domain).
+ *  2. `RAILWAY_PUBLIC_DOMAIN` — injected by Railway at runtime (https).
+ *  3. `http://localhost:<PORT>` — local development fallback.
+ */
+function resolvePublicServerUrl(): string {
+  const explicit = process.env.PUBLIC_URL?.trim();
+  if (explicit) return explicit.replace(/\/+$/, "");
+
+  const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN?.trim();
+  if (railwayDomain) return `https://${railwayDomain.replace(/\/+$/, "")}`;
+
+  return `http://localhost:${process.env.PORT ?? 3000}`;
+}
+
+/**
  * Build the application as a pure factory so the same `App` is reused by
  * `bun --hot src/index.ts`, `scripts/dump-openapi.ts`, and `bun test`
  * without importing the `serve()` adapter (and accidentally booting the
@@ -36,7 +59,7 @@ export function buildApp(): App {
     // `info.title` / `info.version` are pulled from package.json by default;
     // set `openapi.info` here to override them.
     openapi: {
-      servers: [{ url: `http://localhost:${process.env.PORT ?? 3000}` }],
+      servers: [{ url: resolvePublicServerUrl() }],
     },
     docs: true,
     // daloy-minimal:strip-end docs
